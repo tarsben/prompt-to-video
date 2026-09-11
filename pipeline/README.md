@@ -35,9 +35,11 @@ cd pipeline
 modal secret create ptv-secrets \
   LLM_API_KEY=... \
   LLM_BASE_URL=https://openrouter.ai/api/v1 \
-  LLM_MODEL=anthropic/claude-sonnet-4.5 \
-  LLM_MODEL_PLANNER=google/gemini-2.5-flash \
-  LLM_MODEL_CODER=anthropic/claude-sonnet-4.5 \
+  LLM_MODEL=google/gemini-3.8-flash \
+  LLM_MODEL_PLANNER=google/gemini-3.8-flash \
+  LLM_MODEL_ARCHITECT=google/gemini-3.8-flash \
+  LLM_MODEL_VISUAL=google/gemini-3.8-flash \
+  LLM_MODEL_CODER=openai/gpt-5.6-sol \
   ELEVENLABS_API_KEY=... ELEVENLABS_VOICE_ID=... \
   R2_ENDPOINT=... R2_KEY_ID=... R2_KEY_SECRET=... \
   R2_BUCKET=... R2_PUBLIC_BASE=... PTV_WEBHOOK_SECRET=...
