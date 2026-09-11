@@ -8,6 +8,7 @@ Secrets needed (modal secret create ptv-secrets):
 """
 import os
 import sys
+import time
 
 import modal
 from fastapi import Header, HTTPException
@@ -66,9 +67,36 @@ def generate(data: dict, authorization: str | None = Header(default=None)):
         lang = "en"
     if not job_id or not topic:
         raise HTTPException(status_code=400, detail="jobId and topic required")
-    jobs[job_id] = {"stage": "queued", "lang": lang}
+    jobs[job_id] = {"stage": "queued", "lang": lang, "topic": topic,
+                    "createdAt": int(time.time())}
     run_pipeline.spawn(job_id, topic, lang)
     return {"jobId": job_id}
+
+
+@app.function(image=image, secrets=[modal.Secret.from_name("ptv-secrets")])
+@modal.fastapi_endpoint(method="GET")
+def list_jobs(authorization: str | None = Header(default=None)):
+    if not _authorized(authorization):
+        raise HTTPException(status_code=401, detail="unauthorized")
+    out = []
+    for k in jobs.keys():
+        try:
+            v = dict(jobs[k])
+        except Exception:
+            continue
+        out.append({
+            "jobId": k,
+            "title": v.get("title") or v.get("topic") or "Untitled",
+            "stage": v.get("stage"),
+            "lang": v.get("lang") or "en",
+            "createdAt": v.get("createdAt"),
+            "videoUrl": v.get("videoUrl"),
+            "error": (v.get("error") or "")[:200],
+            "sceneDone": v.get("sceneDone"),
+            "sceneCount": v.get("sceneCount"),
+        })
+    out.sort(key=lambda r: r["createdAt"] or 0, reverse=True)
+    return {"jobs": out[:20]}
 
 
 @app.function(image=image, secrets=[modal.Secret.from_name("ptv-secrets")])

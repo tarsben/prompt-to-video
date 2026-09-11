@@ -202,6 +202,7 @@ async function trackJob(jobId, topic, startedAt) {
     } else {
       showWaiting();
     }
+    loadHistory(); // the shelf just gained (or updated) an entry
   } catch (err) {
     console.error(err);
     if (err.timedOut) {
@@ -211,6 +212,7 @@ async function trackJob(jobId, topic, startedAt) {
     } else {
       clearLastJob();
       showError(err.message);
+      loadHistory(); // surface the failed entry in history
     }
   } finally {
     pollActive = false;
@@ -234,3 +236,99 @@ document.addEventListener('DOMContentLoaded', resumeSavedJob);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') resumeSavedJob();
 });
+
+// ---- My videos history ----
+const historySection = document.getElementById('history');
+const historyList = document.getElementById('history-list');
+const historyRefresh = document.getElementById('history-refresh');
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const s = Math.floor(Date.now() / 1000) - ts;
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return d === 1 ? 'yesterday' : `${d}d ago`;
+}
+
+function historyStatus(job) {
+  if (job.stage === 'done' && job.videoUrl) return ['ready', 'Ready'];
+  if (job.stage === 'error') return ['failed', 'Failed'];
+  return ['working', 'Rendering…'];
+}
+
+async function loadHistory() {
+  let jobs = [];
+  try {
+    const res = await fetch('/api/jobs');
+    if (res.ok) {
+      const data = await res.json();
+      jobs = data.jobs || [];
+    }
+  } catch (e) { /* history is a bonus: never break the page */ }
+  renderHistory(jobs);
+}
+
+function renderHistory(jobs) {
+  historyList.innerHTML = '';
+  if (!jobs.length) {
+    historySection.hidden = true;
+    return;
+  }
+  historySection.hidden = false;
+  for (const job of jobs) {
+    const [cls, label] = historyStatus(job);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'history-item';
+    const play = document.createElement('span');
+    play.className = 'history-play';
+    play.textContent = '▶';
+    const meta = document.createElement('span');
+    meta.className = 'history-meta';
+    const title = document.createElement('span');
+    title.className = 'history-title';
+    title.textContent = job.title || 'Untitled';
+    const sub = document.createElement('span');
+    sub.className = 'history-sub';
+    const lang = document.createElement('span');
+    lang.className = 'lang-badge';
+    lang.textContent = job.lang === 'ta' ? 'தமிழ்' : 'English';
+    const when = document.createElement('span');
+    when.textContent = timeAgo(job.createdAt);
+    const chip = document.createElement('span');
+    chip.className = `status-chip status-${cls}`;
+    chip.textContent = label;
+    sub.append(lang, when, chip);
+    meta.append(title, sub);
+    btn.append(play, meta);
+    btn.addEventListener('click', () => openHistoryJob(job));
+    historyList.appendChild(btn);
+  }
+}
+
+function openHistoryJob(job) {
+  if (job.stage === 'done' && job.videoUrl) {
+    showVideo(job.videoUrl, job.title);
+    return;
+  }
+  if (job.stage === 'error') {
+    showError(job.error || 'This video failed to render.');
+    return;
+  }
+  // Still in progress: make it the tracked job and follow it.
+  saveLastJob(job.jobId, job.title);
+  showOnly(resultLoading);
+  loadingText.textContent = 'Picking up where you left off…';
+  trackJob(job.jobId, job.title, job.createdAt ? job.createdAt * 1000 : Date.now());
+}
+
+historyRefresh.addEventListener('click', async () => {
+  historyRefresh.classList.add('spinning');
+  try { await loadHistory(); } finally { historyRefresh.classList.remove('spinning'); }
+});
+
+document.addEventListener('DOMContentLoaded', loadHistory);

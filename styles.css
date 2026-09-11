@@ -259,3 +259,115 @@ footer {
   font-size: 13px;
   margin-top: 40px;
 }
+
+/* ---- My videos history ---- */
+.history[hidden] { display: none; }
+
+.history-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.history-head h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.refresh-btn {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+
+.refresh-btn:hover { color: var(--text); border-color: var(--accent); }
+.refresh-btn.spinning { animation: spin 0.9s linear infinite; }
+
+.history-list { display: flex; flex-direction: column; }
+
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 14px 4px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.history-item:last-child { border-bottom: none; }
+.history-item:hover { background: rgba(124, 92, 255, 0.06); }
+
+.history-play {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+
+.history-meta { flex: 1; min-width: 0; }
+
+.history-title {
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.history-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.lang-badge {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.status-chip {
+  border-radius: 999px;
+  padding: 1px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.status-ready { background: rgba(0, 212, 150, 0.14); color: #3ddc97; }
+.status-working { background: rgba(124, 92, 255, 0.16); color: #b3a1ff; }
+.status-failed { background: rgba(255, 92, 92, 0.14); color: #ff8a8a; }
+
+.history-empty {
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 18px 0 8px;
+}
