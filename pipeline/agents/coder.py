@@ -38,6 +38,8 @@ STYLE GUIDE (shared across scenes for continuity):
 
 Craft bar: the polish of a top-tier YouTube explainer. Generous whitespace, spring-based
 motion, restrained palette, kinetic typography that lands on the spoken words.
+BUDGET: you have a hard output token limit. A complete, slightly simpler scene beats
+an ambitious truncated one — ALWAYS finish the file with every tag and brace closed.
 This is your canvas — make it beautiful.
 Return ONLY the code."""
 
@@ -68,7 +70,7 @@ def write_scene(scene, brief, narration, words, duration_frames, fps, style_guid
         user,
         json_mode=False,
         model=model_for("coder"),
-        max_tokens=6000,
+        max_tokens=16000,
         temperature=0.8,
     )
     return _strip_fences(code)
