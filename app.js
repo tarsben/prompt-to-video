@@ -52,7 +52,7 @@ document.querySelectorAll('.chip').forEach((chip) => {
 });
 
 const LAST_JOB_KEY = 'ptv-last-job';
-const LAST_JOB_TTL_MS = 2 * 60 * 60 * 1000; // forget jobs older than 2h
+const LAST_JOB_TTL_MS = 24 * 60 * 60 * 1000; // forget jobs older than 24h
 
 function saveLastJob(jobId, topic) {
   try {

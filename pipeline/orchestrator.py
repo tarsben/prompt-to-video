@@ -115,7 +115,8 @@ def run(job_id, topic, jobs, vol, workdir, lang="en"):
         url = _upload_to_r2(final_mp4, job_id)
         vol.commit()
 
-        set_stage(jobs, job_id, "done", videoUrl=url, title=plan.get("title"))
+        set_stage(jobs, job_id, "done", videoUrl=url, title=plan.get("title"),
+                    sceneCount=len(specs), sceneDone=len(specs))
     except Exception as e:  # noqa: BLE001
         set_stage(jobs, job_id, "error", error=str(e)[:500])
         raise
