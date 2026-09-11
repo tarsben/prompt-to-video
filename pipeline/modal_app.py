@@ -2,8 +2,7 @@
 
 Deploy with:  modal deploy pipeline/modal_app.py
 Secrets needed (modal secret create ptv-secrets):
-  LLM_API_KEY, LLM_BASE_URL, LLM_MODEL,
-  ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID,
+  LLM_API_KEY, LLM_BASE_URL, LLM_MODEL,   (TTS also uses the OpenRouter key)
   R2_ENDPOINT, R2_KEY_ID, R2_KEY_SECRET, R2_BUCKET, R2_PUBLIC_BASE,
   PTV_WEBHOOK_SECRET
 """
@@ -18,7 +17,11 @@ app = modal.App("prompt-to-video")
 image = (
     modal.Image.from_registry("node:20-bookworm-slim", add_python="3.11")
     .apt_install("ffmpeg", "chromium")
-    .pip_install("requests", "boto3", "elevenlabs", "fastapi[standard]")
+    .pip_install("requests", "boto3", "fastapi[standard]", "faster-whisper")
+    .run_commands(
+        "python3 -c \"from faster_whisper import WhisperModel; "
+        "WhisperModel('base', device='cpu', compute_type='int8')\""
+    )
     .add_local_dir("remotion", "/opt/remotion-template", copy=True)
     .run_commands("cd /opt/remotion-template && npm install --no-audit --no-fund")
     .add_local_dir(".", "/opt/pipeline")

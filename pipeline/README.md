@@ -40,19 +40,23 @@ modal secret create ptv-secrets \
   LLM_MODEL_ARCHITECT=google/gemini-3.8-flash \
   LLM_MODEL_VISUAL=google/gemini-3.8-flash \
   LLM_MODEL_CODER=openai/gpt-5.6-sol \
-  ELEVENLABS_API_KEY=... ELEVENLABS_VOICE_ID=... \
   R2_ENDPOINT=... R2_KEY_ID=... R2_KEY_SECRET=... \
   R2_BUCKET=... R2_PUBLIC_BASE=... PTV_WEBHOOK_SECRET=...
 modal deploy pipeline/modal_app.py
 ```
+
+TTS runs on the same OpenRouter key via the Kokoro 82M model
+(`hexgrad/kokoro-82m`); word timestamps come from a local faster-whisper
+pass. Optional overrides: `TTS_MODEL`, `TTS_VOICE` (default `af_bella`).
 
 The LLM client is provider-agnostic (OpenAI-compatible). With OpenRouter a single
 `LLM_API_KEY` covers all providers; set per-agent models via
 `LLM_MODEL_PLANNER`, `LLM_MODEL_ARCHITECT`, `LLM_MODEL_VISUAL`, `LLM_MODEL_CODER`
 (e.g. a cheap fast model for planning, a strong one for the coder).
 
-Then set Pages env vars: `MODAL_BASE_URL` (the deployed web endpoint base),
-`MODAL_WEBHOOK_SECRET` (same value as PTV_WEBHOOK_SECRET).
+Then set Pages env vars: `MODAL_GENERATE_URL`, `MODAL_STATUS_URL` (the two
+deployed web endpoint URLs), `MODAL_WEBHOOK_SECRET` (same value as
+PTV_WEBHOOK_SECRET).
 
 ## Layout
 
