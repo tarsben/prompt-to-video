@@ -93,13 +93,24 @@ async function generateVideo(topic, onStage) {
   if (!startRes.ok) throw new Error('Failed to start job');
   const { jobId } = await startRes.json();
 
-  // 2. Poll until done (jobs take minutes; poll every 4s, give up after 30 min)
+  // 2. Poll until done (jobs take minutes; poll every 4s, give up after 30 min).
+  // Transient network failures are retried, not fatal: a single failed
+  // status check (common on mobile) must not kill the whole wait.
   const deadline = Date.now() + 30 * 60 * 1000;
+  let failures = 0;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 4000));
-    const res = await fetch(`/api/status?jobId=${encodeURIComponent(jobId)}`);
-    if (!res.ok) throw new Error('Status check failed');
-    const state = await res.json();
+    let state;
+    try {
+      const res = await fetch(`/api/status?jobId=${encodeURIComponent(jobId)}`);
+      if (!res.ok) throw new Error('Status check failed');
+      state = await res.json();
+      failures = 0;
+    } catch (e) {
+      failures++;
+      if (failures >= 5) throw e; // persistent failure: give up for real
+      continue; // transient blip: keep polling
+    }
     if (state.stage === 'done' && state.videoUrl) return state.videoUrl;
     if (state.stage === 'error') throw new Error(state.error || 'Video job failed');
     onStage(state.stage, state);
