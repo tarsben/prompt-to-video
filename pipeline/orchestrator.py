@@ -124,6 +124,7 @@ def build_scene(job_id, spec, workdir):
         shutil.rmtree(projdir)
     shutil.copytree("/opt/remotion-template", projdir)
     scene_file = os.path.join(projdir, "src", "scenes", "Scene.tsx")
+    os.makedirs(os.path.dirname(scene_file), exist_ok=True)
 
     last_error = None
     last_code = None
