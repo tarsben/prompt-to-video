@@ -13,6 +13,17 @@ const loadingText = document.getElementById('loading-text');
 const videoPlayer = document.getElementById('video-player');
 const videoTopic = document.getElementById('video-topic');
 
+const STAGE_LABELS = {
+  queued: 'Getting started…',
+  planning: 'Planning your lesson…',
+  scripting: 'Writing the script…',
+  storyboarding: 'Designing the visuals…',
+  voice: 'Recording the narration…',
+  animating: 'Animating the scenes…',
+  assembling: 'Putting it all together…',
+  uploading: 'Finishing up…',
+};
+
 function showOnly(el) {
   [resultEmpty, resultLoading, resultVideo, resultSoon].forEach((s) => {
     s.hidden = s !== el;
@@ -37,21 +48,25 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  // Loading state
   generateBtn.disabled = true;
   btnLabel.textContent = 'Creating…';
   btnSpinner.hidden = false;
   showOnly(resultLoading);
-  loadingText.textContent = 'Working on your video…';
+  loadingText.textContent = STAGE_LABELS.queued;
 
   try {
-    const videoUrl = await generateVideo(topic);
+    const videoUrl = await generateVideo(topic, (stage, extra) => {
+      let label = STAGE_LABELS[stage] || 'Working on your video…';
+      if (stage === 'animating' && extra.sceneCount) {
+        label = `Animating the scenes (${extra.sceneDone || 0}/${extra.sceneCount})…`;
+      }
+      loadingText.textContent = label;
+    });
     if (videoUrl) {
       videoPlayer.src = videoUrl;
       videoTopic.textContent = 'Explainer: ' + topic;
       showOnly(resultVideo);
     } else {
-      // Backend not wired up yet — show the honest placeholder
       showOnly(resultSoon);
     }
   } catch (err) {
@@ -64,9 +79,27 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-// Step 1: no backend yet. Step 2 will wire this to the real video pipeline.
-async function generateVideo(topic) {
-  // Simulate a short processing delay so the flow is visible end to end.
-  await new Promise((r) => setTimeout(r, 1500));
-  return null; // null = backend not connected yet
+async function generateVideo(topic, onStage) {
+  // 1. Kick off the job
+  const startRes = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ topic }),
+  });
+  if (startRes.status === 503) return null; // backend not configured yet
+  if (!startRes.ok) throw new Error('Failed to start job');
+  const { jobId } = await startRes.json();
+
+  // 2. Poll until done (jobs take minutes; poll every 4s, give up after 30 min)
+  const deadline = Date.now() + 30 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 4000));
+    const res = await fetch(`/api/status?jobId=${encodeURIComponent(jobId)}`);
+    if (!res.ok) throw new Error('Status check failed');
+    const state = await res.json();
+    if (state.stage === 'done' && state.videoUrl) return state.videoUrl;
+    if (state.stage === 'error') throw new Error(state.error || 'Video job failed');
+    onStage(state.stage, state);
+  }
+  throw new Error('Timed out waiting for video');
 }
