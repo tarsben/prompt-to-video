@@ -33,6 +33,16 @@ function showOnly(el) {
   result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+// Video format toggle
+let videoMode = 'short';
+document.querySelectorAll('.mode-option').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-option').forEach((b) => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    videoMode = btn.dataset.mode;
+  });
+});
+
 // Narration language toggle
 let narrationLang = 'en';
 document.querySelectorAll('.lang-option').forEach((btn) => {
@@ -123,7 +133,7 @@ async function startJob(topic) {
   const startRes = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ topic, lang: narrationLang }),
+    body: JSON.stringify({ topic, lang: narrationLang, mode: videoMode }),
   });
   if (startRes.status === 503) throw new Error('Backend not configured yet');
   if (!startRes.ok) throw new Error('Failed to start job');
@@ -294,6 +304,10 @@ function renderHistory(jobs) {
     title.textContent = job.title || 'Untitled';
     const sub = document.createElement('span');
     sub.className = 'history-sub';
+    const modeNames = { reel: '📱 Reels', short: 'Short', deep: '🎓 Deep dive' };
+    const mode = document.createElement('span');
+    mode.className = 'mode-badge';
+    mode.textContent = modeNames[job.mode] || 'Short';
     const lang = document.createElement('span');
     lang.className = 'lang-badge';
     lang.textContent = job.lang === 'ta' ? 'தமிழ்' : 'English';
@@ -302,7 +316,7 @@ function renderHistory(jobs) {
     const chip = document.createElement('span');
     chip.className = `status-chip status-${cls}`;
     chip.textContent = label;
-    sub.append(lang, when, chip);
+    sub.append(mode, lang, when, chip);
     meta.append(title, sub);
     btn.append(play, meta);
     btn.addEventListener('click', () => openHistoryJob(job));

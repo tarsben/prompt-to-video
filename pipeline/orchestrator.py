@@ -47,16 +47,19 @@ def set_stage(jobs, job_id, stage, **extra):
     jobs[job_id] = state
 
 
-def run(job_id, topic, jobs, vol, workdir, lang="en"):
+def run(job_id, topic, jobs, vol, workdir, lang="en", mode="short"):
     """Main entrypoint, runs inside the Modal container."""
     try:
         os.makedirs(workdir, exist_ok=True)
 
         set_stage(jobs, job_id, "planning")
-        plan = planner.plan(topic)
+        plan = planner.plan(topic, mode)
 
         set_stage(jobs, job_id, "scripting", title=plan.get("title"))
-        scenes = architect.build(plan, lang)["scenes"]
+        scenes = architect.build(plan, lang, mode)["scenes"]
+
+        # Reels are vertical 9:16 phone video; everything else is 16:9.
+        width, height = (1080, 1920) if mode == "reel" else (1920, 1080)
 
         set_stage(jobs, job_id, "storyboarding")
         with ThreadPoolExecutor(max_workers=6) as ex:
@@ -88,6 +91,8 @@ def run(job_id, topic, jobs, vol, workdir, lang="en"):
                     "words": a["words"],
                     "mp3": os.path.join(workdir, f"{s['id']}{audio_ext}"),
                     "duration_frames": dur_frames,
+                    "width": width,
+                    "height": height,
                 }
             )
 
@@ -158,10 +163,13 @@ def build_scene(job_id, spec, workdir):
             style_guide=STYLE_GUIDE,
             previous_code=last_code,
             previous_error=last_error,
+            width=spec.get("width", 1920),
+            height=spec.get("height", 1080),
         )
         with open(scene_file, "w") as f:
             f.write(code)
-        _write_root(projdir, spec["id"], spec["duration_frames"])
+        _write_root(projdir, spec["id"], spec["duration_frames"],
+                    spec.get("width", 1920), spec.get("height", 1080))
 
         silent_mp4 = os.path.join(workdir, f"{spec['id']}-silent.mp4")
         ok, err = _remotion_render(projdir, spec["id"], spec["duration_frames"], silent_mp4)
@@ -177,7 +185,7 @@ def build_scene(job_id, spec, workdir):
     raise RuntimeError(f"Scene {spec['id']} failed to render after {MAX_CODE_ATTEMPTS} attempts: {last_error[:500]}")
 
 
-def _write_root(projdir, scene_id, duration_frames):
+def _write_root(projdir, scene_id, duration_frames, width=1920, height=1080):
     root = f"""import {{Composition}} from 'remotion';
 import {{Scene}} from './scenes/Scene';
 
@@ -188,8 +196,8 @@ export const RemotionRoot = () => (
       component={{Scene}}
       durationInFrames={{{duration_frames}}}
       fps={{{FPS}}}
-      width={{1920}}
-      height={{1080}}
+      width={{{width}}}
+      height={{{height}}}
     />
   </>
 );

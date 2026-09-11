@@ -16,8 +16,9 @@ HARD CONSTRAINTS — violating any of these is a failure:
   Do NOT use `export default`. The entrypoint imports it as `import {{Scene}} from './scenes/Scene'`.
 - imports allowed: 'react', 'remotion' (AbsoluteFill, Sequence, spring, interpolate,
   useCurrentFrame, useVideoConfig, Easing, etc.). Nothing else.
-- Resolution 1920x1080, {fps} FPS, EXACTLY {duration_frames} frames. Choreograph every
+- Resolution {width}x{height}, {fps} FPS, EXACTLY {duration_frames} frames. Choreograph every
   animation to this duration; the final frame must look intentional, never cut off.
+{layout_note}
 - Zero network requests, zero external images/video/fonts. Everything is drawn in code:
   divs, SVG, CSS. System font stack only.
 - No <Audio> elements — narration is muxed separately.
@@ -45,9 +46,19 @@ Return ONLY the code."""
 
 
 def write_scene(scene, brief, narration, words, duration_frames, fps, style_guide,
-                previous_code=None, previous_error=None):
+                previous_code=None, previous_error=None, width=1920, height=1080):
     import json
-    system = SYSTEM.format(fps=fps, duration_frames=duration_frames)
+    if height > width:
+        layout_note = (
+            "VERTICAL 9:16 canvas (phone fullscreen). Compose for portrait: stack content "
+            "vertically, keep key visuals and text inside the central 60% of the frame "
+            "(top and bottom are covered by app UI), use large type (nothing important "
+            "below ~56px), avoid wide side-by-side layouts."
+        )
+    else:
+        layout_note = ""
+    system = SYSTEM.format(fps=fps, duration_frames=duration_frames,
+                           width=width, height=height, layout_note=layout_note)
     user = (
         f'NARRATION: "{narration}"\n\n'
         f"WORD_TIMESTAMPS: {json.dumps(words)}\n\n"

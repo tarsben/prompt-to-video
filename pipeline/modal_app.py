@@ -41,10 +41,10 @@ def _authorized(authorization: str | None) -> bool:
 
 @app.function(image=image, volumes={"/data": vol}, timeout=3600,
               secrets=[modal.Secret.from_name("ptv-secrets")])
-def run_pipeline(job_id: str, topic: str, lang: str = "en"):
+def run_pipeline(job_id: str, topic: str, lang: str = "en", mode: str = "short"):
     sys.path.insert(0, "/opt/pipeline")
     from orchestrator import run
-    run(job_id, topic, jobs, vol, f"/data/{job_id}", lang)
+    run(job_id, topic, jobs, vol, f"/data/{job_id}", lang, mode)
 
 
 @app.function(image=image, volumes={"/data": vol}, timeout=1800,
@@ -65,11 +65,14 @@ def generate(data: dict, authorization: str | None = Header(default=None)):
     lang = data.get("lang", "en")
     if lang not in ("en", "ta"):
         lang = "en"
+    mode = data.get("mode", "short")
+    if mode not in ("reel", "short", "deep"):
+        mode = "short"
     if not job_id or not topic:
         raise HTTPException(status_code=400, detail="jobId and topic required")
-    jobs[job_id] = {"stage": "queued", "lang": lang, "topic": topic,
+    jobs[job_id] = {"stage": "queued", "lang": lang, "mode": mode, "topic": topic,
                     "createdAt": int(time.time())}
-    run_pipeline.spawn(job_id, topic, lang)
+    run_pipeline.spawn(job_id, topic, lang, mode)
     return {"jobId": job_id}
 
 
@@ -89,6 +92,7 @@ def list_jobs(authorization: str | None = Header(default=None)):
             "title": v.get("title") or v.get("topic") or "Untitled",
             "stage": v.get("stage"),
             "lang": v.get("lang") or "en",
+            "mode": v.get("mode") or "short",
             "createdAt": v.get("createdAt"),
             "videoUrl": v.get("videoUrl"),
             "error": (v.get("error") or "")[:200],

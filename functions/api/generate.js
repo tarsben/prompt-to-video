@@ -11,6 +11,7 @@ export async function onRequestPost(context) {
   if (!topic) return Response.json({ error: 'Topic is required' }, { status: 400 });
   if (topic.length > 300) return Response.json({ error: 'Topic is too long' }, { status: 400 });
   const lang = body.lang === 'ta' ? 'ta' : 'en';
+  const mode = ['reel', 'short', 'deep'].includes(body.mode) ? body.mode : 'short';
 
   const generateUrl = context.env.MODAL_GENERATE_URL;
   const modalSecret = context.env.MODAL_WEBHOOK_SECRET;
@@ -24,7 +25,7 @@ export async function onRequestPost(context) {
         'Content-Type': 'application/json',
         ...(modalSecret ? { Authorization: `Bearer ${modalSecret}` } : {}),
       },
-      body: JSON.stringify({ jobId, topic, lang }),
+      body: JSON.stringify({ jobId, topic, lang, mode }),
     });
     if (!res.ok) throw new Error(`Modal responded ${res.status}`);
   } catch (err) {
