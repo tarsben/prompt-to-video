@@ -378,6 +378,8 @@ footer {
 .history-meta { flex: 1; min-width: 0; }
 
 .history-title {
+  display: block;
+  max-width: 100%;
   font-weight: 600;
   font-size: 15px;
   white-space: nowrap;
@@ -388,6 +390,7 @@ footer {
 .history-sub {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 3px;
   font-size: 12.5px;
