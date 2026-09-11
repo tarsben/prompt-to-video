@@ -226,7 +226,7 @@ def _concat(mp4s, out, attempts=3):
         proc = subprocess.run(
             ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst,
              "-c:v", "libx264", "-preset", "fast", "-crf", "20",
-             "-c:a", "aac", out],
+             "-c:a", "aac", "-movflags", "+faststart", out],
             capture_output=True, text=True,
         )
         if proc.returncode == 0 and os.path.exists(out) and os.path.getsize(out) > 100_000:
