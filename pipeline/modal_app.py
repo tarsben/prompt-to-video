@@ -11,6 +11,7 @@ import os
 import sys
 
 import modal
+from fastapi import Header, HTTPException
 
 app = modal.App("prompt-to-video")
 
@@ -27,11 +28,11 @@ vol = modal.Volume.from_name("ptv-data", create_if_missing=True)
 jobs = modal.Dict.from_name("ptv-jobs", create_if_missing=True)
 
 
-def _authorized(request):
+def _authorized(authorization: str | None) -> bool:
     expected = os.environ.get("PTV_WEBHOOK_SECRET", "")
     if not expected:
         return True
-    return request.headers.get("authorization") == f"Bearer {expected}"
+    return authorization == f"Bearer {expected}"
 
 
 @app.function(image=image, volumes={"/data": vol}, timeout=3600,
@@ -52,14 +53,13 @@ def build_scene(job_id: str, spec: dict, workdir: str) -> str:
 
 @app.function(image=image, secrets=[modal.Secret.from_name("ptv-secrets")])
 @modal.fastapi_endpoint(method="POST")
-def generate(data: dict, request):
-    from fastapi import Request  # noqa
-    if not _authorized(request):
-        return {"error": "unauthorized"}, 401
+def generate(data: dict, authorization: str | None = Header(default=None)):
+    if not _authorized(authorization):
+        raise HTTPException(status_code=401, detail="unauthorized")
     job_id = data.get("jobId")
     topic = (data.get("topic") or "").strip()
     if not job_id or not topic:
-        return {"error": "jobId and topic required"}, 400
+        raise HTTPException(status_code=400, detail="jobId and topic required")
     jobs[job_id] = {"stage": "queued"}
     run_pipeline.spawn(job_id, topic)
     return {"jobId": job_id}
@@ -67,11 +67,10 @@ def generate(data: dict, request):
 
 @app.function(image=image, secrets=[modal.Secret.from_name("ptv-secrets")])
 @modal.fastapi_endpoint(method="GET")
-def status(request):
-    if not _authorized(request):
-        return {"error": "unauthorized"}, 401
-    job_id = request.query_params.get("jobId")
-    state = jobs.get(job_id)
+def status(jobId: str, authorization: str | None = Header(default=None)):
+    if not _authorized(authorization):
+        raise HTTPException(status_code=401, detail="unauthorized")
+    state = jobs.get(jobId)
     if not state:
-        return {"stage": "unknown"}, 404
+        raise HTTPException(status_code=404, detail="unknown job")
     return dict(state)

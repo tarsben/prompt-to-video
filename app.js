@@ -12,6 +12,7 @@ const resultSoon = document.getElementById('result-soon');
 const loadingText = document.getElementById('loading-text');
 const videoPlayer = document.getElementById('video-player');
 const videoTopic = document.getElementById('video-topic');
+const downloadBtn = document.getElementById('download-btn');
 
 const STAGE_LABELS = {
   queued: 'Getting started…',
@@ -65,6 +66,8 @@ form.addEventListener('submit', async (e) => {
     if (videoUrl) {
       videoPlayer.src = videoUrl;
       videoTopic.textContent = 'Explainer: ' + topic;
+      downloadBtn.href = videoUrl;
+      downloadBtn.setAttribute('download', 'explainer.mp4');
       showOnly(resultVideo);
     } else {
       showOnly(resultSoon);

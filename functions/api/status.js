@@ -4,12 +4,12 @@ export async function onRequestGet(context) {
   const jobId = new URL(context.request.url).searchParams.get('jobId');
   if (!jobId) return Response.json({ error: 'jobId is required' }, { status: 400 });
 
-  const modalBase = context.env.MODAL_BASE_URL;
+  const statusUrl = context.env.MODAL_STATUS_URL;
   const modalSecret = context.env.MODAL_WEBHOOK_SECRET;
-  if (!modalBase) return Response.json({ error: 'Backend not configured' }, { status: 503 });
+  if (!statusUrl) return Response.json({ error: 'Backend not configured' }, { status: 503 });
 
   try {
-    const res = await fetch(`${modalBase}/status?jobId=${encodeURIComponent(jobId)}`, {
+    const res = await fetch(`${statusUrl}?jobId=${encodeURIComponent(jobId)}`, {
       headers: modalSecret ? { Authorization: `Bearer ${modalSecret}` } : {},
     });
     const data = await res.json();

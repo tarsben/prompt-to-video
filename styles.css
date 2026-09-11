@@ -201,6 +201,24 @@ video {
   font-size: 14px;
 }
 
+.download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  background: linear-gradient(135deg, var(--accent-2), #0090c8);
+  transition: transform 0.1s, opacity 0.15s;
+}
+
+.download-btn:hover { transform: translateY(-1px); }
+
 footer {
   text-align: center;
   color: #5d5d75;

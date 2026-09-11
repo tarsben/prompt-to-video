@@ -11,13 +11,13 @@ export async function onRequestPost(context) {
   if (!topic) return Response.json({ error: 'Topic is required' }, { status: 400 });
   if (topic.length > 300) return Response.json({ error: 'Topic is too long' }, { status: 400 });
 
-  const modalBase = context.env.MODAL_BASE_URL;
+  const generateUrl = context.env.MODAL_GENERATE_URL;
   const modalSecret = context.env.MODAL_WEBHOOK_SECRET;
-  if (!modalBase) return Response.json({ error: 'Backend not configured' }, { status: 503 });
+  if (!generateUrl) return Response.json({ error: 'Backend not configured' }, { status: 503 });
 
   const jobId = crypto.randomUUID();
   try {
-    const res = await fetch(`${modalBase}/generate`, {
+    const res = await fetch(generateUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
