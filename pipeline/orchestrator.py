@@ -101,11 +101,13 @@ def run(job_id, topic, jobs, vol, workdir):
                 rendered.append(f.result())
 
         set_stage(jobs, job_id, "assembling")
-        # Scene mp4s were written by worker containers; refresh this container's
-        # view of the volume before reading them (avoids stale/partial reads).
-        vol.reload()
+        # Scene mp4s were written by worker containers; this container's view
+        # of the shared volume can lag behind. Wait until every file is fully
+        # visible (size matches what the worker reported) before stitching,
+        # otherwise we'd silently produce a partial video.
+        _wait_for_scenes(vol, rendered)
         final_mp4 = os.path.join(workdir, "final.mp4")
-        _concat(rendered, final_mp4)
+        _concat([p for p, _ in rendered], final_mp4)
 
         set_stage(jobs, job_id, "uploading")
         url = _upload_to_r2(final_mp4, job_id)
@@ -163,7 +165,10 @@ def build_scene(job_id, spec, workdir):
         if ok and os.path.exists(silent_mp4) and os.path.getsize(silent_mp4) > 50_000:
             final = os.path.join(workdir, f"{spec['id']}.mp4")
             _mux_audio(silent_mp4, spec["mp3"], final)
-            return final
+            # Return the final size: the parent uses it to detect when the
+            # file is fully visible on the shared volume (read view can lag
+            # behind worker writes).
+            return final, os.path.getsize(final)
         last_error, last_code = err, code
 
     raise RuntimeError(f"Scene {spec['id']} failed to render after {MAX_CODE_ATTEMPTS} attempts: {last_error[:500]}")
@@ -209,15 +214,63 @@ def _remotion_render(projdir, comp_id, duration_frames, out_path):
 
 
 def _mux_audio(silent_mp4, mp3, out):
-    # NOTE: Remotion's mp4 contains a SILENT aac stereo/48kHz track. Without an
+    # NOTE: Remotion's mp4 ships a SILENT aac stereo/48kHz track. Without an
     # explicit -map, ffmpeg's automatic stream selection prefers it over the
     # narration mp3 (mono/24kHz) and the scene comes out silent. Map explicitly.
-    subprocess.run(
-        ["ffmpeg", "-y", "-i", silent_mp4, "-i", mp3,
-         "-map", "0:v:0", "-map", "1:a:0",
-         "-c:v", "copy", "-c:a", "aac", "-shortest", out],
-        capture_output=True, check=True,
-    )
+    # NOTE: Kokoro mp3s carry unreliable duration metadata, which -shortest
+    # would trust. Decode to wav first so the true narration length drives
+    # the cut and the narration is never clipped.
+    wav = mp3 + ".narration.wav"
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-i", mp3,
+             "-c:a", "pcm_s16le", wav],
+            check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["ffmpeg", "-y", "-i", silent_mp4, "-i", wav,
+             "-map", "0:v:0", "-map", "1:a:0",
+             "-c:v", "copy", "-c:a", "aac", "-shortest", out],
+            capture_output=True, check=True,
+        )
+    finally:
+        if os.path.exists(wav):
+            os.remove(wav)
+
+
+def _wait_for_scenes(vol, rendered, timeout=900):
+    """Block until every worker-written scene file is fully visible here.
+
+    `rendered` is [(path, size)] with the sizes the workers reported right
+    after writing. The shared volume's read view can lag behind worker
+    writes; concatenating too early silently yields a partial video (seen in
+    production: 27s instead of 146s). Poll until sizes match, are stable
+    across a beat, and each file probes cleanly.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        vol.reload()
+        pending = [p for p, sz in rendered
+                   if not (os.path.exists(p) and os.path.getsize(p) == sz)]
+        if not pending:
+            time.sleep(5)
+            vol.reload()
+            stable = all(os.path.exists(p) and os.path.getsize(p) == sz
+                         for p, sz in rendered)
+            if stable:
+                ok = True
+                for p, _ in rendered:
+                    pr = subprocess.run(
+                        ["ffprobe", "-v", "error", "-show_entries",
+                         "stream=codec_type", "-of", "csv=p=0", p],
+                        capture_output=True, text=True, timeout=120)
+                    if not pr.stdout.strip():
+                        ok = False
+                        break
+                if ok:
+                    return
+        time.sleep(5)
+    raise RuntimeError("Timed out waiting for scene files to appear on the volume")
 
 
 def _concat(mp4s, out, attempts=3):

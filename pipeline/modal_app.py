@@ -48,7 +48,7 @@ def run_pipeline(job_id: str, topic: str):
 
 @app.function(image=image, volumes={"/data": vol}, timeout=1800,
               secrets=[modal.Secret.from_name("ptv-secrets")])
-def build_scene(job_id: str, spec: dict, workdir: str) -> str:
+def build_scene(job_id: str, spec: dict, workdir: str) -> tuple:
     sys.path.insert(0, "/opt/pipeline")
     from orchestrator import build_scene as _build
     return _build(job_id, spec, workdir)

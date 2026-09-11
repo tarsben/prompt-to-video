@@ -63,12 +63,30 @@ def synthesize(text, out_path=None):
 
 
 def _mp3_duration(path):
-    out = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
-         "-of", "default=noprint_wrappers=1:nokey=1", path],
-        capture_output=True, text=True, check=True,
-    )
-    return float(out.stdout.strip())
+    """True audio length by full decode.
+
+    ffprobe's container-level estimate lies for Kokoro mp3s (it over-reported
+    by ~15% in production: 33.9s claimed vs 28.6s actual), which made scenes
+    render too long and stretched word timings. Decoding is the only
+    trustworthy measure; these files are short so it costs <1s.
+    """
+    fd, wav = tempfile.mkstemp(suffix=".wav")
+    os.close(fd)
+    try:
+        subprocess.run(
+            ["ffmpeg", "-y", "-v", "error", "-i", path,
+             "-c:a", "pcm_s16le", wav],
+            check=True, capture_output=True,
+        )
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", wav],
+            capture_output=True, text=True, check=True,
+        )
+        return float(out.stdout.strip())
+    finally:
+        if os.path.exists(wav):
+            os.remove(wav)
 
 
 def _whisper_model():
