@@ -15,6 +15,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -100,6 +101,9 @@ def run(job_id, topic, jobs, vol, workdir):
                 rendered.append(f.result())
 
         set_stage(jobs, job_id, "assembling")
+        # Scene mp4s were written by worker containers; refresh this container's
+        # view of the volume before reading them (avoids stale/partial reads).
+        vol.reload()
         final_mp4 = os.path.join(workdir, "final.mp4")
         _concat(rendered, final_mp4)
 
@@ -212,17 +216,24 @@ def _mux_audio(silent_mp4, mp3, out):
     )
 
 
-def _concat(mp4s, out):
-    lst = tempfile.mktemp(suffix=".txt")
-    with open(lst, "w") as f:
-        for p in mp4s:
-            f.write(f"file '{p}'\n")
-    subprocess.run(
-        ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst,
-         "-c:v", "libx264", "-preset", "fast", "-crf", "20",
-         "-c:a", "aac", out],
-        capture_output=True, check=True,
-    )
+def _concat(mp4s, out, attempts=3):
+    last_err = ""
+    for a in range(attempts):
+        lst = tempfile.mktemp(suffix=".txt")
+        with open(lst, "w") as f:
+            for p in mp4s:
+                f.write(f"file '{p}'\n")
+        proc = subprocess.run(
+            ["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", lst,
+             "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+             "-c:a", "aac", out],
+            capture_output=True, text=True,
+        )
+        if proc.returncode == 0 and os.path.exists(out) and os.path.getsize(out) > 100_000:
+            return
+        last_err = (proc.stderr or proc.stdout or "")[-2000:]
+        time.sleep(10)
+    raise RuntimeError(f"ffmpeg concat failed after {attempts} attempts: {last_err[:1500]}")
 
 
 def _upload_to_r2(path, job_id):
