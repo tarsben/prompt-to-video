@@ -61,7 +61,7 @@ def synthesize(text, out_path=None, lang="en"):
         f.write(resp.content)
 
     duration = _mp3_duration(out_path)
-    words = _word_timestamps(out_path, text, duration)
+    words = _word_timestamps(out_path, text, duration, "en")
     return {"mp3_path": out_path, "duration_sec": duration, "words": words}
 
 
@@ -122,7 +122,7 @@ def _synthesize_gemini(text, out_path=None):
             f"PCM->wav conversion failed: {proc.stderr.decode()[-300:]}")
 
     duration = _mp3_duration(out_path)
-    words = _word_timestamps(out_path, text, duration)
+    words = _word_timestamps(out_path, text, duration, "ta")
     return {"mp3_path": out_path, "duration_sec": duration, "words": words}
 
 
@@ -166,7 +166,7 @@ def _norm(w):
     return re.sub(r"[^\w']", "", w.lower())
 
 
-def _word_timestamps(mp3_path, text, duration):
+def _word_timestamps(mp3_path, text, duration, lang="en"):
     """Word timings via faster-whisper, aligned to the narration text."""
     true_words = text.split()
     if not true_words or duration <= 0:
@@ -175,7 +175,7 @@ def _word_timestamps(mp3_path, text, duration):
     try:
         with _WHISPER_LOCK:
             segments, _ = _whisper_model().transcribe(
-                mp3_path, word_timestamps=True, beam_size=1
+                mp3_path, language=lang, word_timestamps=True, beam_size=1
             )
             heard = [
                 (w.word.strip(), w.start, w.end)
