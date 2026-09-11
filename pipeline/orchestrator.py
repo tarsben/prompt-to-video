@@ -209,8 +209,12 @@ def _remotion_render(projdir, comp_id, duration_frames, out_path):
 
 
 def _mux_audio(silent_mp4, mp3, out):
+    # NOTE: Remotion's mp4 contains a SILENT aac stereo/48kHz track. Without an
+    # explicit -map, ffmpeg's automatic stream selection prefers it over the
+    # narration mp3 (mono/24kHz) and the scene comes out silent. Map explicitly.
     subprocess.run(
         ["ffmpeg", "-y", "-i", silent_mp4, "-i", mp3,
+         "-map", "0:v:0", "-map", "1:a:0",
          "-c:v", "copy", "-c:a", "aac", "-shortest", out],
         capture_output=True, check=True,
     )
