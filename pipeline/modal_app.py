@@ -17,8 +17,8 @@ app = modal.App("prompt-to-video")
 image = (
     modal.Image.from_registry("node:20-bookworm-slim", add_python="3.11")
     .apt_install("ffmpeg", "chromium")
-    .pip_install("requests", "boto3", "elevenlabs")
-    .add_local_dir("remotion", "/opt/remotion-template")
+    .pip_install("requests", "boto3", "elevenlabs", "fastapi[standard]")
+    .add_local_dir("remotion", "/opt/remotion-template", copy=True)
     .run_commands("cd /opt/remotion-template && npm install --no-audit --no-fund")
     .add_local_dir(".", "/opt/pipeline")
 )
@@ -50,7 +50,7 @@ def build_scene(job_id: str, spec: dict, workdir: str) -> str:
     return _build(job_id, spec, workdir)
 
 
-@app.function()
+@app.function(image=image, secrets=[modal.Secret.from_name("ptv-secrets")])
 @modal.fastapi_endpoint(method="POST")
 def generate(data: dict, request):
     from fastapi import Request  # noqa
@@ -65,7 +65,7 @@ def generate(data: dict, request):
     return {"jobId": job_id}
 
 
-@app.function()
+@app.function(image=image, secrets=[modal.Secret.from_name("ptv-secrets")])
 @modal.fastapi_endpoint(method="GET")
 def status(request):
     if not _authorized(request):
