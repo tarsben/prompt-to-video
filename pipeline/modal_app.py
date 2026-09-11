@@ -17,7 +17,7 @@ app = modal.App("prompt-to-video")
 
 image = (
     modal.Image.from_registry("node:20-bookworm-slim", add_python="3.11")
-    .apt_install("ffmpeg", "chromium")
+    .apt_install("ffmpeg", "chromium", "fonts-noto-core")  # noto-core covers Tamil glyphs
     .pip_install("requests", "boto3", "fastapi[standard]", "faster-whisper")
     .run_commands(
         "python3 -c \"from faster_whisper import WhisperModel; "
