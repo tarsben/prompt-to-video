@@ -45,9 +45,11 @@ modal secret create ptv-secrets \
 modal deploy pipeline/modal_app.py
 ```
 
-TTS runs on the same OpenRouter key via the Kokoro 82M model
-(`hexgrad/kokoro-82m`); word timestamps come from a local faster-whisper
-pass. Optional overrides: `TTS_MODEL`, `TTS_VOICE` (default `af_bella`).
+TTS runs on the same OpenRouter key. English uses Kokoro 82M
+(`hexgrad/kokoro-82m`, voice `af_bella`); Tamil (`lang=ta`) uses the latest
+Gemini TTS on OpenRouter (`google/gemini-3.1-flash-tts-preview`, voice `Kore`,
+PCM output converted locally) — overrides: `TTS_MODEL_TA`, `TTS_VOICE_TA`.
+Word timestamps come from a local faster-whisper pass.
 
 The LLM client is provider-agnostic (OpenAI-compatible). With OpenRouter a single
 `LLM_API_KEY` covers all providers; set per-agent models via

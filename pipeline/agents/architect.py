@@ -19,6 +19,14 @@ Rules:
 - The last scene lands the takeaway."""
 
 
-def build(plan):
+def build(plan, lang="en"):
     import json
-    return chat(SYSTEM, f"Lesson plan:\n{json.dumps(plan)}", model=model_for("architect"), max_tokens=3000, temperature=0.7)
+    system = SYSTEM
+    if lang == "ta":
+        system += (
+            "\n\nThe narration must be written in Tamil (Tamil script), sounding like"
+            " a great Tamil teacher speaking — conversational, concrete, no jargon"
+            " without explanation. Keep purpose/id/beat_id in English; only the"
+            " \"narration\" field is in Tamil."
+        )
+    return chat(system, f"Lesson plan:\n{json.dumps(plan)}", model=model_for("architect"), max_tokens=3000, temperature=0.7)

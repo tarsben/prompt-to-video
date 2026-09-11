@@ -47,7 +47,7 @@ def set_stage(jobs, job_id, stage, **extra):
     jobs[job_id] = state
 
 
-def run(job_id, topic, jobs, vol, workdir):
+def run(job_id, topic, jobs, vol, workdir, lang="en"):
     """Main entrypoint, runs inside the Modal container."""
     try:
         os.makedirs(workdir, exist_ok=True)
@@ -56,23 +56,25 @@ def run(job_id, topic, jobs, vol, workdir):
         plan = planner.plan(topic)
 
         set_stage(jobs, job_id, "scripting", title=plan.get("title"))
-        scenes = architect.build(plan)["scenes"]
+        scenes = architect.build(plan, lang)["scenes"]
 
         set_stage(jobs, job_id, "storyboarding")
         with ThreadPoolExecutor(max_workers=6) as ex:
             briefs = list(ex.map(lambda s: visual.direct(s, STYLE_GUIDE), scenes))
 
         set_stage(jobs, job_id, "voice")
+        # Gemini TTS (Tamil) returns PCM -> we store wav; Kokoro (English) mp3.
+        audio_ext = ".wav" if lang == "ta" else ".mp3"
         with ThreadPoolExecutor(max_workers=6) as ex:
             audios = list(
                 ex.map(
                     lambda s: tts.synthesize(
-                        s["narration"], os.path.join(workdir, f"{s['id']}.mp3")
+                        s["narration"], os.path.join(workdir, f"{s['id']}{audio_ext}"), lang
                     ),
                     scenes,
                 )
             )
-        vol.commit()  # make mp3s visible to the render workers
+        vol.commit()  # make audio files visible to the render workers
 
         specs = []
         for s, b, a in zip(scenes, briefs, audios):
@@ -84,7 +86,7 @@ def run(job_id, topic, jobs, vol, workdir):
                     "narration": s["narration"],
                     "brief": b,
                     "words": a["words"],
-                    "mp3": os.path.join(workdir, f"{s['id']}.mp3"),
+                    "mp3": os.path.join(workdir, f"{s['id']}{audio_ext}"),
                     "duration_frames": dur_frames,
                 }
             )

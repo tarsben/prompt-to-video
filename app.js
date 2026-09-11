@@ -33,6 +33,16 @@ function showOnly(el) {
   result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
+// Narration language toggle
+let narrationLang = 'en';
+document.querySelectorAll('.lang-option').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.lang-option').forEach((b) => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    narrationLang = btn.dataset.lang;
+  });
+});
+
 // Example topic chips fill the text box
 document.querySelectorAll('.chip').forEach((chip) => {
   chip.addEventListener('click', () => {
@@ -121,7 +131,7 @@ async function startJob(topic) {
   const startRes = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ topic }),
+    body: JSON.stringify({ topic, lang: narrationLang }),
   });
   if (startRes.status === 503) throw new Error('Backend not configured yet');
   if (!startRes.ok) throw new Error('Failed to start job');

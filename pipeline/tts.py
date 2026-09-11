@@ -20,6 +20,7 @@ import re
 import subprocess
 import tempfile
 import threading
+import time
 
 import requests
 
@@ -31,7 +32,9 @@ def _base_url():
     return os.environ.get("LLM_BASE_URL", "https://openrouter.ai/api/v1").rstrip("/")
 
 
-def synthesize(text, out_path=None):
+def synthesize(text, out_path=None, lang="en"):
+    if lang == "ta":
+        return _synthesize_gemini(text, out_path)
     api_key = os.environ["LLM_API_KEY"]
     model = os.environ.get("TTS_MODEL", "hexgrad/kokoro-82m")
     voice = os.environ.get("TTS_VOICE", "af_bella")
@@ -56,6 +59,67 @@ def synthesize(text, out_path=None):
     resp.raise_for_status()
     with open(out_path, "wb") as f:
         f.write(resp.content)
+
+    duration = _mp3_duration(out_path)
+    words = _word_timestamps(out_path, text, duration)
+    return {"mp3_path": out_path, "duration_sec": duration, "words": words}
+
+
+def _synthesize_gemini(text, out_path=None):
+    """Tamil narration via the latest Gemini TTS on OpenRouter.
+
+    OpenRouter's Gemini TTS returns raw PCM only (headerless s16le, 24kHz,
+    mono) — requesting mp3 is a 400 — so we convert to wav locally with
+    ffmpeg. The 3.1 preview model intermittently returns HTTP 200 with an
+    empty body; retry those. Never send `instructions`: it 502s on this model.
+    """
+    api_key = os.environ["LLM_API_KEY"]
+    model = os.environ.get("TTS_MODEL_TA", "google/gemini-3.1-flash-tts-preview")
+    voice = os.environ.get("TTS_VOICE_TA", "Kore")
+    out_path = out_path or tempfile.mktemp(suffix=".wav")
+
+    last_err = "no attempts made"
+    pcm = b""
+    for attempt in range(3):
+        try:
+            resp = requests.post(
+                f"{_base_url()}/audio/speech",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://prompt-to-video-eso.pages.dev",
+                    "X-Title": "prompt-to-video",
+                },
+                json={
+                    "model": model,
+                    "input": text,
+                    "voice": voice,
+                    "response_format": "pcm",
+                },
+                timeout=300,
+            )
+            resp.raise_for_status()
+            pcm = resp.content or b""
+            if len(pcm) > 1000:
+                break
+            last_err = f"empty audio body on attempt {attempt + 1}"
+        except Exception as e:  # noqa: BLE001 - retry transient failures
+            last_err = str(e)[:200]
+        time.sleep(2 * (attempt + 1))
+    else:
+        raise RuntimeError(f"Gemini TTS returned no usable audio: {last_err}")
+    if len(pcm) <= 1000:
+        raise RuntimeError(f"Gemini TTS returned no usable audio: {last_err}")
+
+    proc = subprocess.run(
+        ["ffmpeg", "-y", "-v", "error",
+         "-f", "s16le", "-ar", "24000", "-ac", "1", "-i", "-",
+         "-c:a", "pcm_s16le", out_path],
+        input=pcm, capture_output=True,
+    )
+    if proc.returncode != 0 or not os.path.exists(out_path):
+        raise RuntimeError(
+            f"PCM->wav conversion failed: {proc.stderr.decode()[-300:]}")
 
     duration = _mp3_duration(out_path)
     words = _word_timestamps(out_path, text, duration)
