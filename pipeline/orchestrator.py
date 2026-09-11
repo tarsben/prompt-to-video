@@ -122,7 +122,17 @@ def build_scene(job_id, spec, workdir):
     projdir = os.path.join(workdir, f"remotion-{spec['id']}")
     if os.path.exists(projdir):
         shutil.rmtree(projdir)
-    shutil.copytree("/opt/remotion-template", projdir)
+    # Copy the template WITHOUT node_modules (it's huge and full of symlinks
+    # that copytree would flatten, breaking .bin/remotion). Symlink it instead:
+    # workers only read from it during render.
+    shutil.copytree(
+        "/opt/remotion-template", projdir,
+        ignore=shutil.ignore_patterns("node_modules"),
+    )
+    os.symlink(
+        "/opt/remotion-template/node_modules",
+        os.path.join(projdir, "node_modules"),
+    )
     scene_file = os.path.join(projdir, "src", "scenes", "Scene.tsx")
     os.makedirs(os.path.dirname(scene_file), exist_ok=True)
 
