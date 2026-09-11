@@ -106,20 +106,12 @@ form.addEventListener('submit', async (e) => {
 
   try {
     const jobId = await startJob(topic);
+    const startedAt = Date.now();
     saveLastJob(jobId, topic); // so the page can resume if closed/backgrounded
-    const videoUrl = await pollJob(jobId, (stage, extra) => {
-      loadingText.textContent = stageLabel(stage, extra);
-    });
-    clearLastJob();
-    if (videoUrl) {
-      showVideo(videoUrl, topic);
-    } else {
-      showOnly(resultSoon);
-    }
+    await trackJob(jobId, topic, startedAt);
   } catch (err) {
     console.error(err);
-    clearLastJob();
-    showOnly(resultSoon);
+    showError('Could not start your video. Please check your connection and try again.');
   } finally {
     generateBtn.disabled = false;
     btnLabel.textContent = 'Create explainer video';
@@ -140,8 +132,11 @@ async function startJob(topic) {
   return jobId;
 }
 
-async function pollJob(jobId, onStage) {
-  const deadline = Date.now() + 30 * 60 * 1000;
+async function pollJob(jobId, onStage, startedAt) {
+  // The backend itself times out after 60 minutes, so a job older than that
+  // can never finish — bound the wait to the job's whole life, not the
+  // visible session (backgrounded tabs freeze timers but not the clock).
+  const deadline = (startedAt || Date.now()) + 60 * 60 * 1000;
   let failures = 0;
   while (Date.now() < deadline) {
     await new Promise((r) => setTimeout(r, 4000));
@@ -157,28 +152,85 @@ async function pollJob(jobId, onStage) {
       continue; // transient blip: keep polling
     }
     if (state.stage === 'done' && state.videoUrl) return state.videoUrl;
-    if (state.stage === 'error') throw new Error(state.error || 'Video job failed');
+    if (state.stage === 'error') {
+      const err = new Error(state.error || 'Video job failed');
+      err.jobFailed = true;
+      throw err;
+    }
     onStage(state.stage, state);
   }
-  throw new Error('Timed out waiting for video');
+  const err = new Error('Timed out waiting for video');
+  err.timedOut = true;
+  throw err;
+}
+
+function showWaiting() {
+  document.getElementById('soon-icon').textContent = '⏳';
+  document.getElementById('soon-title').textContent = 'Still working on your video…';
+  document.getElementById('soon-sub').textContent =
+    'This one is taking longer than usual. You can leave and come back — it will be here when it finishes.';
+  showOnly(resultSoon);
+}
+
+function showError(msg) {
+  document.getElementById('soon-icon').textContent = '⚠️';
+  document.getElementById('soon-title').textContent = 'Something went wrong';
+  document.getElementById('soon-sub').textContent = msg;
+  showOnly(resultSoon);
+}
+
+let pollActive = false;
+
+// Poll a job to completion. Timeout keeps the saved job (the video may still
+// land — a reload picks it up); a real backend failure clears it and says so.
+async function trackJob(jobId, topic, startedAt) {
+  if (pollActive) return;
+  // A job older than ~65min can never finish: the backend kills work at 60min.
+  if (startedAt && Date.now() - startedAt > 65 * 60 * 1000) {
+    clearLastJob();
+    showError('This video got stuck on our end and will not finish. Please try again with a new topic.');
+    return;
+  }
+  pollActive = true;
+  try {
+    const videoUrl = await pollJob(jobId, (stage, extra) => {
+      loadingText.textContent = stageLabel(stage, extra);
+    }, startedAt);
+    clearLastJob();
+    if (videoUrl) {
+      showVideo(videoUrl, topic);
+    } else {
+      showWaiting();
+    }
+  } catch (err) {
+    console.error(err);
+    if (err.timedOut) {
+      showWaiting(); // keep the saved job: the video may still arrive
+    } else if (!err.jobFailed) {
+      showWaiting(); // network died: keep the job, retry on return
+    } else {
+      clearLastJob();
+      showError(err.message);
+    }
+  } finally {
+    pollActive = false;
+  }
 }
 
 // Resume an in-progress job when the page is (re)opened: the user may have
 // switched apps or closed the tab while the video was being made.
-document.addEventListener('DOMContentLoaded', () => {
+function resumeSavedJob() {
   const last = loadLastJob();
   if (!last) return;
   showOnly(resultLoading);
   loadingText.textContent = 'Picking up where you left off…';
-  pollJob(last.jobId, (stage, extra) => {
-    loadingText.textContent = stageLabel(stage, extra);
-  }).then((videoUrl) => {
-    clearLastJob();
-    if (videoUrl) showVideo(videoUrl, last.topic);
-    else showOnly(resultSoon);
-  }).catch((err) => {
-    console.error(err);
-    clearLastJob();
-    showOnly(resultEmpty); // job gone or failed: back to a clean form
-  });
+  trackJob(last.jobId, last.topic, last.startedAt);
+}
+
+document.addEventListener('DOMContentLoaded', resumeSavedJob);
+
+// If the tab was backgrounded and polling died (mobile browsers freeze
+// timers), pick the saved job back up when the user returns.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') resumeSavedJob();
 });
