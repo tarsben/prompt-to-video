@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt to Video — AI Explainer Studio</title>
+  <meta name="description" content="Type a topic, get an explainer video." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-glow"></div>
+  <main class="container">
+    <header class="brand">
+      <div class="logo">▶</div>
+      <span class="brand-name">Prompt to Video</span>
+    </header>
+
+    <section class="hero">
+      <h1>Learn anything,<br />explained on video.</h1>
+      <p class="subtitle">Type a topic below and we'll turn it into a short explainer video.</p>
+    </section>
+
+    <section class="card">
+      <form id="prompt-form">
+        <label for="prompt">What do you want to learn about?</label>
+        <textarea id="prompt" rows="3" maxlength="500"
+          placeholder="e.g. How do black holes form?"></textarea>
+        <div class="examples">
+          <span>Try:</span>
+          <button type="button" class="chip" data-topic="How do neural networks learn?">Neural networks</button>
+          <button type="button" class="chip" data-topic="Why is the sky blue?">Why the sky is blue</button>
+          <button type="button" class="chip" data-topic="How does a blockchain work?">Blockchain</button>
+        </div>
+        <button type="submit" id="generate-btn" class="primary">
+          <span class="btn-label">Create explainer video</span>
+          <span class="btn-spinner" hidden></span>
+        </button>
+      </form>
+    </section>
+
+    <section class="card result" id="result" hidden>
+      <div class="result-empty" id="result-empty">
+        <div class="empty-icon">🎬</div>
+        <p>Your video will appear here.</p>
+      </div>
+      <div class="result-loading" id="result-loading" hidden>
+        <div class="spinner"></div>
+        <p id="loading-text">Working on your video…</p>
+      </div>
+      <div class="result-video" id="result-video" hidden>
+        <video id="video-player" controls playsinline></video>
+        <p class="video-topic" id="video-topic"></p>
+      </div>
+      <div class="result-soon" id="result-soon" hidden>
+        <div class="empty-icon">🔧</div>
+        <p><strong>Video generation is being connected.</strong></p>
+        <p class="muted">Your topic was received — the AI pipeline lands in the next step.</p>
+      </div>
+    </section>
+
+    <footer>
+      <p>AI Explainer Studio · built with Cloudflare Pages</p>
+    </footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
