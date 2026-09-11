@@ -1,5 +1,5 @@
 """Agent 2 — Scene architect. Learning arc -> scenes with narration scripts."""
-from llm import chat
+from llm import chat, model_for
 
 SYSTEM = """You turn a lesson plan into video scenes. Each scene is one continuous shot,
 roughly 15-40 seconds of spoken narration. Write narration that sounds like a great
@@ -21,4 +21,4 @@ Rules:
 
 def build(plan):
     import json
-    return chat(SYSTEM, f"Lesson plan:\n{json.dumps(plan)}", max_tokens=3000, temperature=0.7)
+    return chat(SYSTEM, f"Lesson plan:\n{json.dumps(plan)}", model=model_for("architect"), max_tokens=3000, temperature=0.7)

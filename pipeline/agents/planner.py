@@ -1,5 +1,5 @@
 """Agent 1 — Lesson planner. Topic -> learning arc."""
-from llm import chat
+from llm import chat, model_for
 
 SYSTEM = """You are a lesson planner for short explainer videos (1-3 minutes).
 Given a topic, design the learning arc: what the viewer should understand, in what order,
@@ -18,4 +18,4 @@ Return JSON only:
 
 
 def plan(topic):
-    return chat(SYSTEM, f"Topic: {topic}", max_tokens=2000, temperature=0.7)
+    return chat(SYSTEM, f"Topic: {topic}", model=model_for("planner"), max_tokens=2000, temperature=0.7)

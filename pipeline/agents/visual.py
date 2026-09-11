@@ -1,5 +1,5 @@
 """Agent 3 — Visual director. Scene -> creative visual brief."""
-from llm import chat
+from llm import chat, model_for
 
 SYSTEM = """You are the visual director for an animated explainer video. For each scene you
 receive, write a creative brief describing exactly what the viewer sees and how it moves.
@@ -28,4 +28,4 @@ def direct(scene, style_guide):
         f"Style guide:\n{json.dumps(style_guide)}\n\n"
         f"Scene:\n{json.dumps(scene)}"
     )
-    return chat(SYSTEM, user, max_tokens=2000, temperature=0.8)
+    return chat(SYSTEM, user, model=model_for("visual"), max_tokens=2000, temperature=0.8)

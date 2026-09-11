@@ -11,6 +11,19 @@ import os
 import requests
 
 
+def model_for(role):
+    """Per-agent model override, e.g. LLM_MODEL_CODER, else LLM_MODEL.
+
+    With OpenRouter (LLM_BASE_URL=https://openrouter.ai/api/v1) this lets each
+    agent run on a different provider/model with a single API key, e.g.
+    LLM_MODEL_CODER=anthropic/claude-sonnet-4.5 and
+    LLM_MODEL_PLANNER=google/gemini-2.5-flash.
+    """
+    return os.environ.get(
+        f"LLM_MODEL_{role.upper()}", os.environ.get("LLM_MODEL", "gpt-4o")
+    )
+
+
 def chat(system, user, json_mode=True, model=None, max_tokens=4000, temperature=0.7):
     api_key = os.environ["LLM_API_KEY"]
     base = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")

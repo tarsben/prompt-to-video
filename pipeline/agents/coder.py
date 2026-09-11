@@ -4,14 +4,16 @@ The coder gets FULL creative control: it writes the actual animation code.
 The only guardrail is a correctness loop in the orchestrator (code must compile
 and render; failures are fed back for up to 3 attempts). No taste critic in v1.
 """
-from llm import chat
+from llm import chat, model_for
 
 SYSTEM = """You are an expert motion-graphics developer working in Remotion
 (React-based programmatic video, v4 API). Write a single self-contained scene component.
 
 HARD CONSTRAINTS — violating any of these is a failure:
 - Output ONLY TypeScript React code. No markdown, no explanation.
-- Default-export a component named exactly `Scene`.
+- Declare the component with a NAMED export exactly like this:
+  `export const Scene: React.FC = () => { ... };`
+  Do NOT use `export default`. The entrypoint imports it as `import {Scene} from './scenes/Scene'`.
 - imports allowed: 'react', 'remotion' (AbsoluteFill, Sequence, spring, interpolate,
   useCurrentFrame, useVideoConfig, Easing, etc.). Nothing else.
 - Resolution 1920x1080, {fps} FPS, EXACTLY {duration_frames} frames. Choreograph every
@@ -65,6 +67,7 @@ def write_scene(scene, brief, narration, words, duration_frames, fps, style_guid
         .replace("{style_json}", json.dumps(style_guide)),
         user,
         json_mode=False,
+        model=model_for("coder"),
         max_tokens=6000,
         temperature=0.8,
     )
