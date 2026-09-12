@@ -68,3 +68,7 @@ PTV_WEBHOOK_SECRET).
 - `agents/` — planner, architect, visual, coder
 - `tts.py` — ElevenLabs with word timestamps
 - `remotion/` — Remotion template baked into the Modal image
+- `skills/remotion/` — vendored official Remotion agent skills (pinned to the
+  SHA in `skills/remotion/SHA`). `remotion-markup` is injected into the coder
+  agent's system prompt (`agents/coder.py`) with a sandbox adapter; refresh
+  monthly with `skills/refresh.sh`, then redeploy.
