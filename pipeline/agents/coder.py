@@ -3,8 +3,38 @@
 The coder gets FULL creative control: it writes the actual animation code.
 The only guardrail is a correctness loop in the orchestrator (code must compile
 and render; failures are fed back for up to 3 attempts). No taste critic in v1.
+
+Official Remotion agent skills are vendored in pipeline/skills/remotion/ and the
+remotion-markup skill is injected into the system prompt (see REMOTION_SKILLS_MD)
+so generated scenes follow Remotion's own idioms. Only remotion-markup is
+injected: it is the skill directly applicable to writing scene components.
+remotion-best-practices is mostly a router to other skills; remotion-captions
+and remotion-render are vendored for future use (subtitles toggle, render
+upgrades) but reference packages/APIs outside the scene sandbox.
 """
+import os as _os
+import re as _re
+
 from llm import chat, model_for
+
+_SKILL_DIR = _os.path.join(_os.path.dirname(__file__), "..", "skills", "remotion")
+
+
+def _load_skill(name):
+    """Load a vendored Remotion agent skill, stripping its YAML frontmatter."""
+    try:
+        with open(_os.path.join(_SKILL_DIR, name + ".md"), encoding="utf-8") as f:
+            text = f.read()
+    except OSError:
+        return ""
+    return _re.sub(r"^---\n.*?\n---\n", "", text, count=1,
+                   flags=_re.DOTALL).strip()
+
+
+# Injected into SYSTEM via the {remotion_skills} placeholder in write_scene's
+# str.format() call. Passed as a format *value*, so the skill's own curly braces
+# are inserted literally and never interpreted.
+REMOTION_SKILLS_MD = _load_skill("remotion-markup")
 
 SYSTEM = """You are an expert motion-graphics developer working in Remotion
 (React-based programmatic video, v4 API). Write a single self-contained scene component.
@@ -23,6 +53,16 @@ HARD CONSTRAINTS — violating any of these is a failure:
   divs, SVG, CSS. System font stack only.
 - No <Audio> elements — narration is muxed separately.
 - Must compile under `tsc --noEmit` strict.
+
+OFFICIAL REMOTION GUIDANCE (from Remotion's own agent skill — follow these idioms):
+{remotion_skills}
+
+SANDBOX ADAPTER — where the guidance above conflicts with the HARD CONSTRAINTS,
+the HARD CONSTRAINTS win. Concretely: no @remotion/* packages beyond 'remotion'
+itself, no staticFile(), no <Audio>/<Video>/<CanvasImage>/<AnimatedImage>
+elements, no Interactive.* wrappers, no Tailwind, no CSS transitions or keyframe
+animations. Drive ALL motion with useCurrentFrame() + interpolate() exactly as
+the guidance describes.
 
 TIMED NARRATION (the voiceover for this exact scene):
 "{{narration}}"
@@ -58,7 +98,8 @@ def write_scene(scene, brief, narration, words, duration_frames, fps, style_guid
     else:
         layout_note = ""
     system = SYSTEM.format(fps=fps, duration_frames=duration_frames,
-                           width=width, height=height, layout_note=layout_note)
+                           width=width, height=height, layout_note=layout_note,
+                           remotion_skills=REMOTION_SKILLS_MD)
     user = (
         f'NARRATION: "{narration}"\n\n'
         f"WORD_TIMESTAMPS: {json.dumps(words)}\n\n"
