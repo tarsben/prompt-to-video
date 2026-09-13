@@ -45,12 +45,32 @@ def chat(system, user, json_mode=True, model=None, max_tokens=4000, temperature=
         # For Google models that's Gemini's built-in Google Search grounding
         # (billed as provider passthrough on the same OpenRouter key).
         payload["plugins"] = [{"id": "web"}]
+    resp = _post(base, api_key, payload)
+    if resp is None:
+        # Web grounding is best-effort: the search plugin can transiently fail
+        # (HTTP 400s seen 2026-09-13). Retry once as a plain chat call so one
+        # flaky plugin never fails the whole video.
+        del payload["plugins"]
+        resp = _post(base, api_key, payload)
+    content = resp.json()["choices"][0]["message"]["content"]
+    return json.loads(content) if json_mode else content
+
+
+def _post(base, api_key, payload):
+    """POST a chat payload. Returns None (instead of raising) when the
+    web-search plugin was attached and the call failed, so the caller can
+    retry without it. All other errors raise with the API's error body."""
     resp = requests.post(
         f"{base}/chat/completions",
         headers={"Authorization": f"Bearer {api_key}"},
         json=payload,
         timeout=300,
     )
-    resp.raise_for_status()
-    content = resp.json()["choices"][0]["message"]["content"]
-    return json.loads(content) if json_mode else content
+    if resp.status_code >= 400:
+        # Include the API's error body — raise_for_status() drops it, which
+        # makes 400s undebuggable from the stored job record.
+        err = RuntimeError(f"LLM HTTP {resp.status_code}: {resp.text[:1500]}")
+        if payload.get("plugins"):
+            return None
+        raise err
+    return resp
