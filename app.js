@@ -1,5 +1,6 @@
 const form = document.getElementById('prompt-form');
 const promptInput = document.getElementById('prompt');
+const notesInput = document.getElementById('notes');
 const generateBtn = document.getElementById('generate-btn');
 const btnLabel = generateBtn.querySelector('.btn-label');
 const btnSpinner = generateBtn.querySelector('.btn-spinner');
@@ -115,7 +116,7 @@ form.addEventListener('submit', async (e) => {
   loadingText.textContent = STAGE_LABELS.queued;
 
   try {
-    const jobId = await startJob(topic);
+    const jobId = await startJob(topic, notesInput.value.trim());
     const startedAt = Date.now();
     saveLastJob(jobId, topic); // so the page can resume if closed/backgrounded
     await trackJob(jobId, topic, startedAt);
@@ -129,11 +130,11 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-async function startJob(topic) {
+async function startJob(topic, notes) {
   const startRes = await fetch('/api/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ topic, lang: narrationLang, mode: videoMode }),
+    body: JSON.stringify({ topic, lang: narrationLang, mode: videoMode, notes }),
   });
   if (startRes.status === 503) throw new Error('Backend not configured yet');
   if (!startRes.ok) throw new Error('Failed to start job');

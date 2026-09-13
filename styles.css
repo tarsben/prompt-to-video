@@ -92,6 +92,16 @@ label {
   margin-bottom: 10px;
 }
 
+label .optional {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+#notes {
+  margin-bottom: 18px;
+}
+
 textarea {
   width: 100%;
   background: var(--surface-2);

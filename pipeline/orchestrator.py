@@ -48,16 +48,16 @@ def set_stage(jobs, job_id, stage, **extra):
     jobs[job_id] = state
 
 
-def run(job_id, topic, jobs, vol, workdir, lang="en", mode="short"):
+def run(job_id, topic, jobs, vol, workdir, lang="en", mode="short", notes=""):
     """Main entrypoint, runs inside the Modal container."""
     try:
         os.makedirs(workdir, exist_ok=True)
 
         set_stage(jobs, job_id, "planning")
-        plan = planner.plan(topic, mode)
+        plan = planner.plan(topic, mode, notes)
 
         set_stage(jobs, job_id, "scripting", title=plan.get("title"))
-        scenes = architect.build(plan, lang, mode)["scenes"]
+        scenes = architect.build(plan, lang, mode, notes)["scenes"]
 
         # Reels are vertical 9:16 phone video; everything else is 16:9.
         width, height = (1080, 1920) if mode == "reel" else (1920, 1080)

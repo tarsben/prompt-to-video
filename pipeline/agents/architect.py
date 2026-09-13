@@ -41,10 +41,13 @@ MODE_SPECS = {
 }
 
 
-def build(plan, lang="en", mode="short"):
+def build(plan, lang="en", mode="short", notes=""):
     import json
     spec = MODE_SPECS.get(mode, MODE_SPECS["short"])
     system = BASE + "\n\n" + spec["brief"]
+    if notes.strip():
+        system += ("\n\nThe user gave these extra instructions for this video — "
+                   "follow them while writing the scenes:\n" + notes.strip())
     if lang == "ta":
         system += (
             "\n\nThe narration must be written in Tamil (Tamil script), sounding like"

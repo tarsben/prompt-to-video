@@ -43,8 +43,11 @@ MODE_SPECS = {
 }
 
 
-def plan(topic, mode="short"):
+def plan(topic, mode="short", notes=""):
     spec = MODE_SPECS.get(mode, MODE_SPECS["short"])
     system = BASE + "\n\n" + spec["brief"]
+    if notes.strip():
+        system += ("\n\nThe user gave these extra instructions for this video — "
+                   "follow them while planning:\n" + notes.strip())
     return chat(system, f"Topic: {topic}", model=model_for("planner"),
                 max_tokens=spec["max_tokens"], temperature=0.7, web_search=True)
