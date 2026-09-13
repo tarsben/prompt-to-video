@@ -67,8 +67,8 @@ def run(job_id, topic, jobs, vol, workdir, lang="en", mode="short"):
             briefs = list(ex.map(lambda s: visual.direct(s, STYLE_GUIDE), scenes))
 
         set_stage(jobs, job_id, "voice")
-        # Gemini TTS (Tamil) returns PCM -> we store wav; Kokoro (English) mp3.
-        audio_ext = ".wav" if lang == "ta" else ".mp3"
+        # Gemini TTS returns PCM -> we store wav for both languages.
+        audio_ext = ".wav"
         with ThreadPoolExecutor(max_workers=6) as ex:
             audios = list(
                 ex.map(

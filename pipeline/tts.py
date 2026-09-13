@@ -1,16 +1,22 @@
-"""Text-to-speech via OpenRouter (Kokoro 82M), with word-level timestamps.
+"""Text-to-speech via OpenRouter's Gemini TTS, with word-level timestamps.
 
-Uses OpenRouter's OpenAI-compatible /audio/speech endpoint with the
-hexgrad/kokoro-82m model — the same API key as the LLM agents, so no
-separate TTS provider is needed. Kokoro returns raw audio but no
-timestamps, so word timings come from a local faster-whisper pass (CPU)
-aligned against the known narration text.
+Both English and Tamil use Gemini TTS (`google/gemini-3.1-flash-tts-preview`
+by default) — it sounds markedly more natural than the previous Kokoro 82M
+English voice. OpenRouter's Gemini TTS returns raw PCM only (headerless s16le,
+24kHz, mono), so we convert to wav locally with ffmpeg. Kokoro remains
+available as a fallback: set TTS_EN_ENGINE=kokoro.
+
+Gemini TTS returns no timestamps, so word timings come from a local
+faster-whisper pass (CPU) aligned against the known narration text.
 
 Env:
   LLM_API_KEY  (required; OpenRouter key)
   LLM_BASE_URL (default https://openrouter.ai/api/v1)
-  TTS_MODEL    (default hexgrad/kokoro-82m)
-  TTS_VOICE    (default af_bella)
+  TTS_MODEL_EN (default google/gemini-3.1-flash-tts-preview)
+  TTS_VOICE_EN (default Aoede)
+  TTS_MODEL_TA (default google/gemini-3.1-flash-tts-preview)
+  TTS_VOICE_TA (default Kore)
+  TTS_EN_ENGINE (default gemini; set to kokoro for the legacy English voice)
 
 synthesize(text) -> {"mp3_path": ..., "duration_sec": ..., "words": [{"word","start","end"}]}
 """
@@ -34,7 +40,14 @@ def _base_url():
 
 def synthesize(text, out_path=None, lang="en"):
     if lang == "ta":
-        return _synthesize_gemini(text, out_path)
+        return _synthesize_gemini(text, out_path, lang="ta")
+    if os.environ.get("TTS_EN_ENGINE", "gemini").lower() == "kokoro":
+        return _synthesize_kokoro(text, out_path)  # legacy fallback
+    return _synthesize_gemini(text, out_path, lang="en")
+
+
+def _synthesize_kokoro(text, out_path=None):
+    """Legacy English voice (Kokoro 82M). Kept as a fallback; Gemini is default."""
     api_key = os.environ["LLM_API_KEY"]
     model = os.environ.get("TTS_MODEL", "hexgrad/kokoro-82m")
     voice = os.environ.get("TTS_VOICE", "af_bella")
@@ -65,8 +78,8 @@ def synthesize(text, out_path=None, lang="en"):
     return {"mp3_path": out_path, "duration_sec": duration, "words": words}
 
 
-def _synthesize_gemini(text, out_path=None):
-    """Tamil narration via the latest Gemini TTS on OpenRouter.
+def _synthesize_gemini(text, out_path=None, lang="ta"):
+    """Narration via Gemini TTS on OpenRouter (English and Tamil).
 
     OpenRouter's Gemini TTS returns raw PCM only (headerless s16le, 24kHz,
     mono) — requesting mp3 is a 400 — so we convert to wav locally with
@@ -74,8 +87,12 @@ def _synthesize_gemini(text, out_path=None):
     empty body; retry those. Never send `instructions`: it 502s on this model.
     """
     api_key = os.environ["LLM_API_KEY"]
-    model = os.environ.get("TTS_MODEL_TA", "google/gemini-3.1-flash-tts-preview")
-    voice = os.environ.get("TTS_VOICE_TA", "Kore")
+    if lang == "ta":
+        model = os.environ.get("TTS_MODEL_TA", "google/gemini-3.1-flash-tts-preview")
+        voice = os.environ.get("TTS_VOICE_TA", "Kore")
+    else:
+        model = os.environ.get("TTS_MODEL_EN", "google/gemini-3.1-flash-tts-preview")
+        voice = os.environ.get("TTS_VOICE_EN", "Aoede")
     out_path = out_path or tempfile.mktemp(suffix=".wav")
 
     last_err = "no attempts made"
@@ -122,7 +139,7 @@ def _synthesize_gemini(text, out_path=None):
             f"PCM->wav conversion failed: {proc.stderr.decode()[-300:]}")
 
     duration = _mp3_duration(out_path)
-    words = _word_timestamps(out_path, text, duration, "ta")
+    words = _word_timestamps(out_path, text, duration, lang)
     return {"mp3_path": out_path, "duration_sec": duration, "words": words}
 
 

@@ -10,7 +10,7 @@ topic
   └─> planner        topic -> learning arc (beats)
   └─> architect      beats -> scenes with narration scripts
   └─> visual         scene -> creative visual brief (parallel)
-  └─> tts            narration -> mp3 + word timestamps (parallel, ElevenLabs)
+  └─> tts            narration -> wav + word timestamps (parallel, Gemini TTS)
   └─> coder          scene+brief+timestamps -> Remotion TSX (full creative control)
         └─ correctness loop: code must compile & render (<=3 attempts)
   └─> render         Remotion -> mp4 per scene (parallel Modal workers)
@@ -51,11 +51,13 @@ modal secret create ptv-secrets \
 modal deploy pipeline/modal_app.py
 ```
 
-TTS runs on the same OpenRouter key. English uses Kokoro 82M
-(`hexgrad/kokoro-82m`, voice `af_bella`); Tamil (`lang=ta`) uses the latest
-Gemini TTS on OpenRouter (`google/gemini-3.1-flash-tts-preview`, voice `Kore`,
-PCM output converted locally) — overrides: `TTS_MODEL_TA`, `TTS_VOICE_TA`.
-Word timestamps come from a local faster-whisper pass.
+TTS runs on the same OpenRouter key. Both English and Tamil use Gemini TTS on
+OpenRouter (`google/gemini-3.1-flash-tts-preview`, PCM output converted locally):
+English voice `Aoede`, Tamil voice `Kore` — overrides: `TTS_MODEL_EN`,
+`TTS_VOICE_EN`, `TTS_MODEL_TA`, `TTS_VOICE_TA`. (Legacy: `TTS_EN_ENGINE=kokoro`
+restores the old Kokoro 82M English voice.) Word timestamps come from a local
+faster-whisper pass. Rough TTS cost per video: Reel ~$0.03, Short ~$0.15,
+Deep dive ~$0.60.
 
 The LLM client is provider-agnostic (OpenAI-compatible). With OpenRouter a single
 `LLM_API_KEY` covers all providers; set per-agent models via
@@ -72,7 +74,7 @@ PTV_WEBHOOK_SECRET).
 - `orchestrator.py` — pipeline coordination, render/concat/upload
 - `llm.py` — provider-agnostic LLM client (OpenAI-compatible)
 - `agents/` — planner, architect, visual, coder
-- `tts.py` — ElevenLabs with word timestamps
+- `tts.py` — Gemini TTS with word timestamps (faster-whisper)
 - `remotion/` — Remotion template baked into the Modal image
 - `skills/remotion/` — vendored official Remotion agent skills (pinned to the
   SHA in `skills/remotion/SHA`). `remotion-markup` is injected into the coder
