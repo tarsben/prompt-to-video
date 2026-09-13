@@ -31,6 +31,12 @@ used for the Gemini models (provider passthrough billing on the same key).
 The planner verifies facts/figures/dates against live results before the
 learning arc is written.
 
+**Per-video instructions:** the site has an optional "Anything specific?" box;
+its contents travel as `notes` from `/api/generate` through the Modal
+`generate` endpoint into `run_pipeline`, and are appended to the planner and
+scene-architect system prompts so the lesson plan and scene scripts follow
+the user's extra direction.
+
 **Typography:** the coder prompt enforces minimum type sizes (16:9 — titles
 96–140px, labels/body 56–80px, nothing readable below 48px; 9:16 — nothing
 below 56px) plus a "fewer words, bigger type" rule. Tamil script always renders:
