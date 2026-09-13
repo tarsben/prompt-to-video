@@ -17,7 +17,16 @@ app = modal.App("prompt-to-video")
 
 image = (
     modal.Image.from_registry("node:20-bookworm-slim", add_python="3.11")
-    .apt_install("ffmpeg", "chromium", "fonts-noto-core")  # noto-core covers Tamil glyphs
+    .apt_install("ffmpeg", "chromium", "fonts-noto-core")
+    # Tamil glyphs must ALWAYS render (Debian's fonts-noto-core coverage varies):
+    # bake Noto Sans Tamil into the image explicitly so Chromium fallback is deterministic.
+    .run_commands(
+        "mkdir -p /usr/share/fonts/truetype/noto-tamil && "
+        "python3 -c \"import urllib.request; urllib.request.urlretrieve("
+        "'https://github.com/google/fonts/raw/main/ofl/notosanstamil/NotoSansTamil%5Bwdth,wght%5D.ttf', "
+        "'/usr/share/fonts/truetype/noto-tamil/NotoSansTamil.ttf')\" && "
+        "fc-cache -f >/dev/null && (fc-list | grep -ci tamil || true)"
+    )
     .pip_install("requests", "boto3", "fastapi[standard]", "faster-whisper")
     .run_commands(
         "python3 -c \"from faster_whisper import WhisperModel; "

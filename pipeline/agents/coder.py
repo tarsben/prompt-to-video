@@ -79,6 +79,9 @@ STYLE GUIDE (shared across scenes for continuity):
 
 Craft bar: the polish of a top-tier YouTube explainer. Generous whitespace, spring-based
 motion, restrained palette, kinetic typography that lands on the spoken words.
+READABILITY IS NON-NEGOTIABLE: big, high-contrast type at or above the minimums above,
+legible at a glance on a phone screen. Fewer words, bigger type — if a line doesn't fit
+at these sizes, cut words; never shrink the font to cram text in.
 BUDGET: you have a hard output token limit. A complete, slightly simpler scene beats
 an ambitious truncated one — ALWAYS finish the file with every tag and brace closed.
 This is your canvas — make it beautiful.
@@ -92,11 +95,16 @@ def write_scene(scene, brief, narration, words, duration_frames, fps, style_guid
         layout_note = (
             "VERTICAL 9:16 canvas (phone fullscreen). Compose for portrait: stack content "
             "vertically, keep key visuals and text inside the central 60% of the frame "
-            "(top and bottom are covered by app UI), use large type (nothing important "
-            "below ~56px), avoid wide side-by-side layouts."
+            "(top and bottom are covered by app UI). TYPE MINIMUMS: titles 84-120px, "
+            "labels and body text 56-72px — nothing the viewer must read below 56px. "
+            "Avoid wide side-by-side layouts."
         )
     else:
-        layout_note = ""
+        layout_note = (
+            "HORIZONTAL 16:9 canvas. TYPE MINIMUMS (must be readable at a glance on a "
+            "phone screen): titles 96-140px, key labels and body text 56-80px — "
+            "nothing the viewer must read below 48px."
+        )
     system = SYSTEM.format(fps=fps, duration_frames=duration_frames,
                            width=width, height=height, layout_note=layout_note,
                            remotion_skills=REMOTION_SKILLS_MD)

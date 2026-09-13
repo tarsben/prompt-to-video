@@ -25,6 +25,12 @@ its narration mp3; the coder receives word-level timestamps as hard constraints.
 correctness is enforced (compile + render). A vision critic can be added later
 if quality needs it.
 
+**Typography:** the coder prompt enforces minimum type sizes (16:9 — titles
+96–140px, labels/body 56–80px, nothing readable below 48px; 9:16 — nothing
+below 56px) plus a "fewer words, bigger type" rule. Tamil script always renders:
+Noto Sans Tamil is baked into the container image and named explicitly in the
+shared font stack, so Chromium never falls back to tofu boxes.
+
 **Speed:** scenes fan out across Modal containers; the critic was dropped;
 720p drafts optional later. Target: 3-6 min for a ~2 min video.
 

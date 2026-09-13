@@ -36,7 +36,8 @@ STYLE_GUIDE = {
         "accent": "#7c5cff",
         "accent2": "#00d4ff",
     },
-    "fonts": "system-ui, -apple-system, sans-serif for all text",
+    "fonts": "system-ui, 'Noto Sans Tamil', 'Noto Sans', sans-serif — use this exact "
+               "stack for ALL text so Tamil script always renders (never a bare generic family)",
     "tone": "premium explainer-video aesthetic: generous whitespace, smooth motion, restrained color",
 }
 
