@@ -4,6 +4,9 @@ from llm import chat, model_for
 BASE = """You are a lesson planner for explainer videos.
 Given a topic, design the learning arc: what the viewer should understand, in what order,
 and the narrative thread connecting the ideas.
+You have live web search: use it to verify key facts, figures, names, dates, and any
+recent developments relevant to the topic. Prefer current, accurate information over
+memory; never invent statistics.
 
 Return JSON only:
 {
@@ -44,4 +47,4 @@ def plan(topic, mode="short"):
     spec = MODE_SPECS.get(mode, MODE_SPECS["short"])
     system = BASE + "\n\n" + spec["brief"]
     return chat(system, f"Topic: {topic}", model=model_for("planner"),
-                max_tokens=spec["max_tokens"], temperature=0.7)
+                max_tokens=spec["max_tokens"], temperature=0.7, web_search=True)

@@ -25,6 +25,12 @@ its narration mp3; the coder receives word-level timestamps as hard constraints.
 correctness is enforced (compile + render). A vision critic can be added later
 if quality needs it.
 
+**Web research:** the planner and scene architect run with OpenRouter's `web`
+plugin enabled — no engine specified, so Google's native Search grounding is
+used for the Gemini models (provider passthrough billing on the same key).
+The planner verifies facts/figures/dates against live results before the
+learning arc is written.
+
 **Typography:** the coder prompt enforces minimum type sizes (16:9 — titles
 96–140px, labels/body 56–80px, nothing readable below 48px; 9:16 — nothing
 below 56px) plus a "fewer words, bigger type" rule. Tamil script always renders:

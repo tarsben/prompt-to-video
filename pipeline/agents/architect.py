@@ -15,7 +15,9 @@ Return JSON only:
 }
 Rules:
 - The first scene must hook the viewer fast.
-- The last scene lands the takeaway."""
+- The last scene lands the takeaway.
+- You have live web search: verify any facts, figures, names, or dates in the
+  narration; never invent statistics."""
 
 MODE_SPECS = {
     "reel": {
@@ -51,4 +53,4 @@ def build(plan, lang="en", mode="short"):
             " \"narration\" field is in Tamil."
         )
     return chat(system, f"Lesson plan:\n{json.dumps(plan)}", model=model_for("architect"),
-                max_tokens=spec["max_tokens"], temperature=0.7)
+                max_tokens=spec["max_tokens"], temperature=0.7, web_search=True)

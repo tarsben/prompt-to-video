@@ -24,7 +24,8 @@ def model_for(role):
     )
 
 
-def chat(system, user, json_mode=True, model=None, max_tokens=4000, temperature=0.7):
+def chat(system, user, json_mode=True, model=None, max_tokens=4000, temperature=0.7,
+         web_search=False):
     api_key = os.environ["LLM_API_KEY"]
     base = os.environ.get("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/")
     model = model or os.environ.get("LLM_MODEL", "gpt-4o")
@@ -39,6 +40,11 @@ def chat(system, user, json_mode=True, model=None, max_tokens=4000, temperature=
     }
     if json_mode:
         payload["response_format"] = {"type": "json_object"}
+    if web_search:
+        # OpenRouter web plugin with no engine -> the provider's NATIVE search.
+        # For Google models that's Gemini's built-in Google Search grounding
+        # (billed as provider passthrough on the same OpenRouter key).
+        payload["plugins"] = [{"id": "web"}]
     resp = requests.post(
         f"{base}/chat/completions",
         headers={"Authorization": f"Bearer {api_key}"},
