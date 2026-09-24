@@ -64,7 +64,7 @@ modal deploy pipeline/modal_app.py
 ```
 
 TTS runs on the same OpenRouter key. Both English and Tamil use Gemini TTS on
-OpenRouter (`google/gemini-3.1-flash-tts-preview`, PCM output converted locally):
+OpenRouter (`google/gemini-3.8-flash-tts`, PCM output converted locally):
 English voice `Aoede`, Tamil voice `Kore` — overrides: `TTS_MODEL_EN`,
 `TTS_VOICE_EN`, `TTS_MODEL_TA`, `TTS_VOICE_TA`. (Legacy: `TTS_EN_ENGINE=kokoro`
 restores the old Kokoro 82M English voice.) Word timestamps come from a local

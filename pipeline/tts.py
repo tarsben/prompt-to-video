@@ -1,6 +1,6 @@
 """Text-to-speech via OpenRouter's Gemini TTS, with word-level timestamps.
 
-Both English and Tamil use Gemini TTS (`google/gemini-3.1-flash-tts-preview`
+Both English and Tamil use Gemini TTS (`google/gemini-3.8-flash-tts`
 by default) — it sounds markedly more natural than the previous Kokoro 82M
 English voice. OpenRouter's Gemini TTS returns raw PCM only (headerless s16le,
 24kHz, mono), so we convert to wav locally with ffmpeg. Kokoro remains
@@ -12,9 +12,9 @@ faster-whisper pass (CPU) aligned against the known narration text.
 Env:
   LLM_API_KEY  (required; OpenRouter key)
   LLM_BASE_URL (default https://openrouter.ai/api/v1)
-  TTS_MODEL_EN (default google/gemini-3.1-flash-tts-preview)
+  TTS_MODEL_EN (default google/gemini-3.8-flash-tts)
   TTS_VOICE_EN (default Aoede)
-  TTS_MODEL_TA (default google/gemini-3.1-flash-tts-preview)
+  TTS_MODEL_TA (default google/gemini-3.8-flash-tts)
   TTS_VOICE_TA (default Kore)
   TTS_EN_ENGINE (default gemini; set to kokoro for the legacy English voice)
 
@@ -83,15 +83,15 @@ def _synthesize_gemini(text, out_path=None, lang="ta"):
 
     OpenRouter's Gemini TTS returns raw PCM only (headerless s16le, 24kHz,
     mono) — requesting mp3 is a 400 — so we convert to wav locally with
-    ffmpeg. The 3.1 preview model intermittently returns HTTP 200 with an
-    empty body; retry those. Never send `instructions`: it 502s on this model.
+    ffmpeg. The model intermittently returns HTTP 200 with an empty body;
+    retry those. Never send `instructions`: it 502s on this model.
     """
     api_key = os.environ["LLM_API_KEY"]
     if lang == "ta":
-        model = os.environ.get("TTS_MODEL_TA", "google/gemini-3.1-flash-tts-preview")
+        model = os.environ.get("TTS_MODEL_TA", "google/gemini-3.8-flash-tts")
         voice = os.environ.get("TTS_VOICE_TA", "Kore")
     else:
-        model = os.environ.get("TTS_MODEL_EN", "google/gemini-3.1-flash-tts-preview")
+        model = os.environ.get("TTS_MODEL_EN", "google/gemini-3.8-flash-tts")
         voice = os.environ.get("TTS_VOICE_EN", "Aoede")
     out_path = out_path or tempfile.mktemp(suffix=".wav")
 
