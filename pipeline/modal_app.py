@@ -5,6 +5,11 @@ Secrets needed (modal secret create ptv-secrets):
   LLM_API_KEY, LLM_BASE_URL, LLM_MODEL,   (TTS also uses the OpenRouter key)
   R2_ENDPOINT, R2_KEY_ID, R2_KEY_SECRET, R2_BUCKET, R2_PUBLIC_BASE,
   PTV_WEBHOOK_SECRET
+Per-agent model overrides live in the separate 'ptv-llm-models' secret so the
+main secret never needs recreating:
+  modal secret create ptv-llm-models LLM_MODEL_CODER=anthropic/claude-opus-5.5
+The coder agent reads LLM_MODEL_CODER via llm.model_for("coder"); any agent can
+be pinned the same way (LLM_MODEL_PLANNER, LLM_MODEL_ARCHITECT, ...).
 """
 import os
 import sys
@@ -49,7 +54,8 @@ def _authorized(authorization: str | None) -> bool:
 
 
 @app.function(image=image, volumes={"/data": vol}, timeout=3600,
-              secrets=[modal.Secret.from_name("ptv-secrets")])
+              secrets=[modal.Secret.from_name("ptv-secrets"),
+                       modal.Secret.from_name("ptv-llm-models")])
 def run_pipeline(job_id: str, topic: str, lang: str = "en", mode: str = "short",
                  notes: str = ""):
     sys.path.insert(0, "/opt/pipeline")
@@ -58,7 +64,8 @@ def run_pipeline(job_id: str, topic: str, lang: str = "en", mode: str = "short",
 
 
 @app.function(image=image, volumes={"/data": vol}, timeout=1800,
-              secrets=[modal.Secret.from_name("ptv-secrets")])
+              secrets=[modal.Secret.from_name("ptv-secrets"),
+                       modal.Secret.from_name("ptv-llm-models")])
 def build_scene(job_id: str, spec: dict, workdir: str) -> tuple:
     sys.path.insert(0, "/opt/pipeline")
     from orchestrator import build_scene as _build
