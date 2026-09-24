@@ -7,9 +7,14 @@ Secrets needed (modal secret create ptv-secrets):
   PTV_WEBHOOK_SECRET
 Per-agent model overrides live in the separate 'ptv-llm-models' secret so the
 main secret never needs recreating:
-  modal secret create ptv-llm-models LLM_MODEL_CODER=anthropic/claude-opus-5.5
-The coder agent reads LLM_MODEL_CODER via llm.model_for("coder"); any agent can
-be pinned the same way (LLM_MODEL_PLANNER, LLM_MODEL_ARCHITECT, ...).
+  modal secret create --force ptv-llm-models \
+    LLM_MODEL_CODER=anthropic/claude-opus-5.5 \
+    LLM_MODEL_PLANNER=google/gemini-3.8-flash \
+    LLM_MODEL_ARCHITECT=google/gemini-3.8-flash \
+    LLM_MODEL_VISUAL=google/gemini-3.8-flash
+Each agent reads its LLM_MODEL_<ROLE> via llm.model_for(role), falling back to
+LLM_MODEL from ptv-secrets. (--force replaces the whole secret, so list every
+key each time.)
 """
 import os
 import sys
